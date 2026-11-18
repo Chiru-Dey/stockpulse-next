@@ -49,5 +49,10 @@ export function getPool(): Pool {
 }
 
 export function getDb() {
+  // drizzle-orm 0.45 requires `mode` whenever `schema` is passed.
   return drizzle(getPool(), { schema, mode: "default" });
 }
+
+export type Db = ReturnType<typeof getDb>;
+export type DbTx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+export type DbOrTx = Db | DbTx;

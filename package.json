@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts"
@@ -15,10 +16,12 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.45.4",
+    "jose": "^6.0.0",
     "mysql2": "^3.24.6",
     "next": "^16.0.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
@@ -31,7 +34,8 @@
     "eslint-config-next": "^16.0.0",
     "tailwindcss": "^4.1.0",
     "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.0.0"
   },
   "overrides": {
     "@typescript-eslint/typescript-estree": {
