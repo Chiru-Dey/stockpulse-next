@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql, { type Pool } from "mysql2/promise";
+import * as schema from "./schema";
 
 const globalForDb = globalThis as unknown as {
   __stockpulsePool?: Pool;
@@ -48,5 +49,5 @@ export function getPool(): Pool {
 }
 
 export function getDb() {
-  return drizzle(getPool());
+  return drizzle(getPool(), { schema, mode: "default" });
 }
