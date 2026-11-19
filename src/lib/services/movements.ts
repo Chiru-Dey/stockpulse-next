@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, sql, type SQL } from "drizzle-orm";
 import {
   products,
   stockMovements,
@@ -129,16 +129,25 @@ export type CreateMovementServiceInput = {
   createdBy: number;
 };
 
+export type MovementResult = {
+  row: MovementWithMeta;
+  product: { id: number; sku: string; name: string };
+  previous_qty: number;
+  new_qty: number;
+  low_stock_threshold: number;
+};
+
 /**
  * The only way stock_qty ever changes. Locks the product row for the whole
  * read-check-write sequence so concurrent OUT requests cannot oversell.
  * Requires the root db (TiDB has no SAVEPOINT support for nested transactions).
+ * Returns the stock transition so callers can trigger threshold alerts.
  */
 export async function createMovement(
   db: Db,
   input: CreateMovementServiceInput,
-): Promise<MovementWithMeta> {
-  const movementId = await db.transaction(async (tx) => {
+): Promise<MovementResult> {
+  const outcome = await db.transaction(async (tx) => {
     const locked = await tx
       .select()
       .from(products)
@@ -189,14 +198,25 @@ export async function createMovement(
       .set({ stockQty: nextQty })
       .where(eq(products.id, input.productId));
 
-    return inserted.id;
+    return { movementId: inserted.id, product, newQty: nextQty };
   });
 
-  const row = await findMovementById(db, movementId);
+  const row = await findMovementById(db, outcome.movementId);
   if (!row) {
     throw new Error("Movement disappeared immediately after commit");
   }
-  return row;
+
+  return {
+    row,
+    product: {
+      id: outcome.product.id,
+      sku: outcome.product.sku,
+      name: outcome.product.name,
+    },
+    previous_qty: outcome.product.stockQty,
+    new_qty: outcome.newQty,
+    low_stock_threshold: outcome.product.lowStockThreshold,
+  };
 }
 
 export async function getLedgerBalance(
@@ -256,4 +276,67 @@ export async function reconcileProductStock(
       corrected: drift !== 0,
     };
   });
+}
+
+export type StockDrift = {
+  product_id: number;
+  cached_qty: number;
+  ledger_qty: number;
+};
+
+/**
+ * One pass over active products comparing the cached qty with the ledger sum.
+ * GROUP BY uses plain columns only, which TiDB's only_full_group_by accepts.
+ */
+export async function findStockDrift(
+  db: DbOrTx,
+  limit = 50,
+): Promise<StockDrift[]> {
+  const ledgerSum = sql<number>`COALESCE(SUM(CASE
+    WHEN ${stockMovements.movementType} = 'IN' THEN ${stockMovements.quantity}
+    ELSE -${stockMovements.quantity}
+  END), 0)`;
+
+  const rows = await db
+    .select({
+      product_id: products.id,
+      cached_qty: products.stockQty,
+      ledger_qty: ledgerSum,
+    })
+    .from(products)
+    .leftJoin(stockMovements, eq(stockMovements.productId, products.id))
+    .where(isNull(products.archivedAt))
+    .groupBy(products.id, products.stockQty)
+    .having(sql`${products.stockQty} <> ${ledgerSum}`)
+    .orderBy(asc(products.id))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    product_id: row.product_id,
+    cached_qty: Number(row.cached_qty),
+    ledger_qty: Number(row.ledger_qty),
+  }));
+}
+
+export type ReconcileSweepResult = {
+  drifted: number;
+  corrected: number;
+  details: ReconcileResult[];
+};
+
+export async function reconcileDriftedProducts(
+  db: Db,
+  limit = 50,
+): Promise<ReconcileSweepResult> {
+  const drifts = await findStockDrift(db, limit);
+  const details: ReconcileResult[] = [];
+  // Sequential on purpose: the pool is tiny and each fix takes a row lock.
+  for (const drift of drifts) {
+    details.push(await reconcileProductStock(db, drift.product_id));
+  }
+  return {
+    drifted: drifts.length,
+    corrected: details.filter((detail) => detail.corrected).length,
+    details,
+  };
 }
