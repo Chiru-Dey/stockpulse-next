@@ -25,22 +25,25 @@ export function parsePagination(url: URL): PaginationParams {
   };
 }
 
-export type PaginationMeta = {
+export type Paginated<T> = {
+  items: T[];
+  total: number;
   page: number;
   per_page: number;
-  total: number;
-  total_pages: number;
+  pages: number;
 };
 
-export function paginationMeta(
-  page: number,
-  perPage: number,
+/** Brief-mandated list envelope. `pages` is never below 1. */
+export function paginated<T>(
+  items: T[],
   total: number,
-): PaginationMeta {
+  pagination: PaginationParams,
+): Paginated<T> {
   return {
-    page,
-    per_page: perPage,
+    items,
     total,
-    total_pages: Math.max(1, Math.ceil(total / perPage)),
+    page: pagination.page,
+    per_page: pagination.perPage,
+    pages: Math.max(1, Math.ceil(total / pagination.perPage)),
   };
 }

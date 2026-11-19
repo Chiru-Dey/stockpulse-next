@@ -9,7 +9,7 @@ import {
   createCategorySchema,
   listCategoriesQuerySchema,
 } from "@/lib/validation/categories";
-import { parsePagination, paginationMeta } from "@/lib/api/pagination";
+import { parsePagination, paginated } from "@/lib/api/pagination";
 import { ok, fail } from "@/lib/api/respond";
 import { readJsonBody } from "@/lib/api/request";
 
@@ -28,10 +28,7 @@ export async function GET(req: Request) {
       pagination,
     );
 
-    return ok({
-      data: rows.map(toPublicCategory),
-      pagination: paginationMeta(pagination.page, pagination.perPage, total),
-    });
+    return ok(paginated(rows.map(toPublicCategory), total, pagination));
   } catch (error) {
     return fail(error);
   }

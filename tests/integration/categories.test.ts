@@ -76,14 +76,14 @@ describe("categories API", () => {
     );
     expect(search.status).toBe(200);
     const searchBody = await json(search);
-    expect((searchBody.pagination as Record<string, unknown>).total).toBe(1);
+    expect(searchBody.total).toBe(1);
 
     const page = await listCategoriesRoute(
       req("GET", "/api/categories?page=2&per_page=2", { token }),
     );
     const pageBody = await json(page);
-    expect((pageBody.data as unknown[]).length).toBe(1);
-    expect(pageBody.pagination).toMatchObject({ page: 2, per_page: 2, total: 3, total_pages: 2 });
+    expect((pageBody.items as unknown[]).length).toBe(1);
+    expect(pageBody).toMatchObject({ page: 2, per_page: 2, total: 3, pages: 2 });
   });
 
   it("gets by id, 404s unknown ids, 400s malformed ids", async () => {

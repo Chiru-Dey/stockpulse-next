@@ -27,8 +27,8 @@ async function makeProduct(
   return (await json(res)).product as Record<string, unknown> & { id: number };
 }
 
-// Fixture-only direct stock writes: simulates ledger outcomes until the
-// movements API (Step 6) exists. The API itself never allows this.
+// Fixture-only direct stock writes: simulates ledger outcomes. The API itself
+// never allows changing stock_qty outside the movements ledger.
 async function setStock(sku: string, qty: number): Promise<void> {
   await getDb().update(products).set({ stockQty: qty }).where(eq(products.sku, sku));
 }
@@ -95,25 +95,25 @@ describe("products API", () => {
     await setStock("F-2", 3); // low
 
     const low = await json(await listProductsRoute(req("GET", "/api/products?stock_status=low", { token })));
-    expect((low.pagination as Record<string, unknown>).total).toBe(1);
-    expect((low.data as Array<Record<string, unknown>>)[0]?.sku).toBe("F-2");
+    expect(low.total).toBe(1);
+    expect((low.items as Array<Record<string, unknown>>)[0]?.sku).toBe("F-2");
 
     const out = await json(await listProductsRoute(req("GET", "/api/products?stock_status=out", { token })));
-    expect((out.data as Array<Record<string, unknown>>)[0]?.sku).toBe("F-3");
+    expect((out.items as Array<Record<string, unknown>>)[0]?.sku).toBe("F-3");
 
     const byCategory = await json(await listProductsRoute(req("GET", `/api/products?category_id=${catA.id}`, { token })));
-    expect((byCategory.pagination as Record<string, unknown>).total).toBe(2);
+    expect(byCategory.total).toBe(2);
 
     const byName = await json(await listProductsRoute(req("GET", "/api/products?search=WIDGET", { token })));
-    expect((byName.pagination as Record<string, unknown>).total).toBe(2);
+    expect(byName.total).toBe(2);
 
     const bySku = await json(await listProductsRoute(req("GET", "/api/products?search=f-3", { token })));
-    expect((bySku.pagination as Record<string, unknown>).total).toBe(1);
+    expect(bySku.total).toBe(1);
 
     const combined = await json(await listProductsRoute(
       req("GET", `/api/products?category_id=${catB.id}&stock_status=out`, { token }),
     ));
-    expect((combined.pagination as Record<string, unknown>).total).toBe(1);
+    expect(combined.total).toBe(1);
   });
 
   it("archives idempotently, hides from lists, supports include_archived and restore", async () => {
@@ -125,10 +125,10 @@ describe("products API", () => {
     expect((await deleteProductRoute(req("DELETE", `/api/products/${product.id}`, { token }), ctx(product.id))).status).toBe(204);
 
     const defaultList = await json(await listProductsRoute(req("GET", "/api/products", { token })));
-    expect((defaultList.pagination as Record<string, unknown>).total).toBe(0);
+    expect(defaultList.total).toBe(0);
 
     const withArchived = await json(await listProductsRoute(req("GET", "/api/products?include_archived=true", { token })));
-    expect((withArchived.pagination as Record<string, unknown>).total).toBe(1);
+    expect(withArchived.total).toBe(1);
 
     const byId = await getProductRoute(req("GET", `/api/products/${product.id}`, { token }), ctx(product.id));
     expect(byId.status).toBe(200);
@@ -203,7 +203,7 @@ describe("products API", () => {
     await makeProduct(token, { sku: "P-3", name: "Three", category_id: category.id });
 
     const page = await json(await listProductsRoute(req("GET", "/api/products?page=2&per_page=2", { token })));
-    expect((page.data as unknown[]).length).toBe(1);
-    expect(page.pagination).toMatchObject({ page: 2, per_page: 2, total: 3, total_pages: 2 });
+    expect((page.items as unknown[]).length).toBe(1);
+    expect(page).toMatchObject({ page: 2, per_page: 2, total: 3, pages: 2 });
   });
 });

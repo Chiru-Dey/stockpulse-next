@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db/client";
 import { requireAdmin } from "@/lib/auth/guards";
 import { createUser, listUsers, toPublicUser } from "@/lib/services/users";
 import { createUserSchema, listUsersQuerySchema } from "@/lib/validation/users";
-import { parsePagination, paginationMeta } from "@/lib/api/pagination";
+import { parsePagination, paginated } from "@/lib/api/pagination";
 import { ok, fail } from "@/lib/api/respond";
 import { readJsonBody } from "@/lib/api/request";
 
@@ -28,10 +28,7 @@ export async function GET(req: Request) {
       pagination,
     );
 
-    return ok({
-      data: rows.map(toPublicUser),
-      pagination: paginationMeta(pagination.page, pagination.perPage, total),
-    });
+    return ok(paginated(rows.map(toPublicUser), total, pagination));
   } catch (error) {
     return fail(error);
   }

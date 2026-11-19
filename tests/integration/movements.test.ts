@@ -91,8 +91,8 @@ describe("stock movements ledger", () => {
     expect(await stockOf(product.id)).toBe(6);
 
     const list = await json(await listMovementsRoute(req("GET", "/api/stock-movements", { token })));
-    expect((list.pagination as Record<string, unknown>).total).toBe(2);
-    const first = (list.data as Array<Record<string, unknown>>)[0];
+    expect(list.total).toBe(2);
+    const first = (list.items as Array<Record<string, unknown>>)[0];
     expect(first?.movement_type).toBe("OUT"); // newest first
     expect(first?.product_sku).toBe("HAPPY-1");
 
@@ -156,10 +156,10 @@ describe("stock movements ledger", () => {
     await move(token, b.id, "IN", 7);
 
     const byProduct = await json(await listMovementsRoute(req("GET", `/api/stock-movements?product_id=${a.id}`, { token })));
-    expect((byProduct.pagination as Record<string, unknown>).total).toBe(2);
+    expect(byProduct.total).toBe(2);
 
     const byType = await json(await listMovementsRoute(req("GET", "/api/stock-movements?movement_type=OUT", { token })));
-    expect((byType.pagination as Record<string, unknown>).total).toBe(1);
+    expect(byType.total).toBe(1);
 
     const today = new Date().toISOString().slice(0, 10);
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
@@ -167,12 +167,12 @@ describe("stock movements ledger", () => {
     const inRange = await json(await listMovementsRoute(
       req("GET", `/api/stock-movements?date_from=${today}&date_to=${today}`, { token }),
     ));
-    expect((inRange.pagination as Record<string, unknown>).total).toBe(3);
+    expect(inRange.total).toBe(3);
 
     const outOfRange = await json(await listMovementsRoute(
       req("GET", `/api/stock-movements?date_from=${yesterday}&date_to=${yesterday}`, { token }),
     ));
-    expect((outOfRange.pagination as Record<string, unknown>).total).toBe(0);
+    expect(outOfRange.total).toBe(0);
   });
 
   it("serializes concurrent OUT requests so stock never goes negative", async () => {

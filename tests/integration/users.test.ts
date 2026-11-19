@@ -59,13 +59,13 @@ describe("users API", () => {
     const search = await listUsersRoute(req("GET", "/api/users?search=ZELDA", { token }));
     expect(search.status).toBe(200);
     const searchBody = await json(search);
-    expect((searchBody.pagination as Record<string, unknown>).total).toBe(1);
-    expect((searchBody.data as Array<Record<string, unknown>>)[0]?.email).toBe("zelda@test.dev");
+    expect(searchBody.total).toBe(1);
+    expect((searchBody.items as Array<Record<string, unknown>>)[0]?.email).toBe("zelda@test.dev");
 
     const page = await listUsersRoute(req("GET", "/api/users?page=2&per_page=1", { token }));
     const pageBody = await json(page);
-    expect((pageBody.data as unknown[]).length).toBe(1);
-    expect(pageBody.pagination).toMatchObject({ page: 2, per_page: 1, total: 3, total_pages: 3 });
+    expect((pageBody.items as unknown[]).length).toBe(1);
+    expect(pageBody).toMatchObject({ page: 2, per_page: 1, total: 3, pages: 3 });
   });
 
   it("creates users, rejects duplicates and weak passwords", async () => {

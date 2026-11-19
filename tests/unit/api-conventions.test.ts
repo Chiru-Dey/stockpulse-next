@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  parsePagination,
-  paginationMeta,
-} from "@/lib/api/pagination";
+import { parsePagination, paginated } from "@/lib/api/pagination";
 import { escapeLike, containsPattern } from "@/lib/db/utils";
 import { idParamSchema } from "@/lib/validation/common";
 import {
@@ -41,13 +38,27 @@ describe("parsePagination", () => {
   });
 });
 
-describe("paginationMeta", () => {
-  it("computes total_pages", () => {
-    expect(paginationMeta(2, 10, 25)).toEqual({ page: 2, per_page: 10, total: 25, total_pages: 3 });
+describe("paginated envelope", () => {
+  it("matches the documented list shape", () => {
+    const pagination = { page: 2, perPage: 10, offset: 10, limit: 10 };
+    expect(paginated([{ id: 1 }], 25, pagination)).toEqual({
+      items: [{ id: 1 }],
+      total: 25,
+      page: 2,
+      per_page: 10,
+      pages: 3,
+    });
   });
 
   it("never reports zero pages", () => {
-    expect(paginationMeta(1, 20, 0).total_pages).toBe(1);
+    const pagination = { page: 1, perPage: 20, offset: 0, limit: 20 };
+    expect(paginated([], 0, pagination)).toEqual({
+      items: [],
+      total: 0,
+      page: 1,
+      per_page: 20,
+      pages: 1,
+    });
   });
 });
 
