@@ -34,6 +34,9 @@ function createPool(): Pool {
     connectTimeout: 10_000,
     enableKeepAlive: true,
     keepAliveInitialDelay: 10_000,
+    // All timestamps are UTC end-to-end. Without this, mysql2 formats/parses
+    // dates in the machine's local zone while server defaults use UTC.
+    timezone: "Z",
     ssl: {
       minVersion: "TLSv1.2",
       rejectUnauthorized: true,
