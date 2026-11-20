@@ -9,13 +9,14 @@ import type { User } from "@/types/api";
 
 type NavItem = { href: string; label: string; adminOnly?: boolean };
 
-// All five spec pages now exist. "Users" is admin-only and lives under /admin.
+// All spec pages exist. "Users" is admin-only; "API docs" is a public page.
 const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/products", label: "Products" },
   { href: "/categories", label: "Categories" },
   { href: "/movements", label: "Movements" },
   { href: "/admin/users", label: "Users", adminOnly: true },
+  { href: "/docs", label: "API docs" },
 ];
 
 export function AppShell({ user, children }: { user: User; children: ReactNode }) {
