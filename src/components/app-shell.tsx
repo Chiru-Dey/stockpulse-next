@@ -9,8 +9,14 @@ import type { User } from "@/types/api";
 
 type NavItem = { href: string; label: string; adminOnly?: boolean };
 
-// Extended in later steps as pages land — never link to a page that doesn't exist.
-const NAV: NavItem[] = [{ href: "/dashboard", label: "Dashboard" }];
+// All five spec pages now exist. "Users" is admin-only and lives under /admin.
+const NAV: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/products", label: "Products" },
+  { href: "/categories", label: "Categories" },
+  { href: "/movements", label: "Movements" },
+  { href: "/admin/users", label: "Users", adminOnly: true },
+];
 
 export function AppShell({ user, children }: { user: User; children: ReactNode }) {
   const pathname = usePathname();
